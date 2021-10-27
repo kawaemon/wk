@@ -1,8 +1,8 @@
-use crate::HeartBeat;
+use crate::model::HeartBeat;
 use anyhow::Result;
 use std::future::Future;
 
-pub(crate) trait HeartBeatRepository {
+pub trait HeartBeatRepository {
     type SaveFuture<'a, I: 'a>: Future<Output = Result<()>> + 'a;
 
     fn save<'a, I>(&'a mut self, heartbeats: I) -> Self::SaveFuture<'a, I>
@@ -10,14 +10,14 @@ pub(crate) trait HeartBeatRepository {
         I: Iterator<Item = HeartBeat> + 'a;
 }
 
-pub(crate) mod mongo {
+pub mod mongo {
     use super::*;
     use anyhow::{Context as _, Result};
     use mongodb::options::ClientOptions;
     use mongodb::{Client, Collection};
 
     #[derive(Clone)]
-    pub(crate) struct MongoDb {
+    pub struct MongoDb {
         inner: Collection<MongoHeartBeat>,
     }
 
@@ -25,7 +25,7 @@ pub(crate) mod mongo {
         const DATABASE_NAME: &'static str = "wk";
         const COLLECTION_NAME: &'static str = "heartbeat";
 
-        pub(crate) async fn new(url: &str) -> Result<Self> {
+        pub async fn new(url: &str) -> Result<Self> {
             let opt = ClientOptions::parse(url)
                 .await
                 .context("failed to parse mongodb url")?;
@@ -60,18 +60,18 @@ pub(crate) mod mongo {
     }
 
     #[derive(Debug, Clone, serde::Serialize)]
-    pub(crate) struct MongoHeartBeat {
-        pub(crate) branch: Option<String>,
-        pub(crate) category: Option<String>,
-        pub(crate) entity: Option<String>,
-        pub(crate) is_write: Option<bool>,
-        pub(crate) language: Option<String>,
-        pub(crate) lineno: Option<i32>,
-        pub(crate) lines: Option<i32>,
-        pub(crate) project: Option<String>,
-        pub(crate) time: Option<bson::DateTime>,
-        pub(crate) user_agent: Option<String>,
-        pub(crate) machine_name: Option<String>,
+    struct MongoHeartBeat {
+        branch: Option<String>,
+        category: Option<String>,
+        entity: Option<String>,
+        is_write: Option<bool>,
+        language: Option<String>,
+        lineno: Option<i32>,
+        lines: Option<i32>,
+        project: Option<String>,
+        time: Option<bson::DateTime>,
+        user_agent: Option<String>,
+        machine_name: Option<String>,
     }
 
     impl MongoHeartBeat {

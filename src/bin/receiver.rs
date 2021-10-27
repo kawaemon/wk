@@ -1,18 +1,12 @@
-#![feature(min_type_alias_impl_trait)]
-#![feature(generic_associated_types)]
-
-mod db;
-mod iterext;
-mod model;
-
 use anyhow::Context as _;
 use std::convert::Infallible;
 use warp::http::StatusCode;
 use warp::reply::WithStatus;
 use warp::Filter;
 
-use crate::iterext::IterExt;
-use crate::model::HeartBeat;
+use wk::db;
+use wk::iterext::IterExt;
+use wk::model::HeartBeat;
 
 fn env(key: &str) -> anyhow::Result<String> {
     std::env::var(key).with_context(|| format!("failed to get \"{}\" environment variable", key))
@@ -67,9 +61,8 @@ async fn on_heartbeat(
 ) -> Result<WithStatus<&'static str>, Infallible> {
     use warp::reply::with_status;
 
-    match auth {
-        Some(k) if k == key => {}
-        _ => return Ok(with_status("Unauthorized", StatusCode::UNAUTHORIZED)),
+    if !matches!(auth, Some(k) if k == key) {
+        return Ok(with_status("Unauthorized", StatusCode::UNAUTHORIZED));
     }
 
     let iter = msg.into_iter().map(|x| x.into());
@@ -99,35 +92,35 @@ async fn on_heartbeat(
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub(crate) struct HeartBeatJson {
-    pub(crate) branch: Option<String>,
-    pub(crate) category: Option<String>,
-    pub(crate) entity: Option<String>,
-    pub(crate) is_write: Option<bool>,
-    pub(crate) language: Option<String>,
-    pub(crate) lineno: Option<i32>,
-    pub(crate) lines: Option<i32>,
-    pub(crate) project: Option<String>,
-    pub(crate) time: Option<f64>,
-    pub(crate) user_agent: Option<String>,
-    pub(crate) machine_name: Option<String>,
+struct HeartBeatJson {
+    branch: Option<String>,
+    category: Option<String>,
+    entity: Option<String>,
+    is_write: Option<bool>,
+    language: Option<String>,
+    lineno: Option<i32>,
+    lines: Option<i32>,
+    project: Option<String>,
+    time: Option<f64>,
+    user_agent: Option<String>,
+    machine_name: Option<String>,
 }
 
-impl Into<HeartBeat> for HeartBeatJson {
-    fn into(self) -> HeartBeat {
+impl From<HeartBeatJson> for HeartBeat {
+    fn from(h: HeartBeatJson) -> Self {
         use chrono::TimeZone;
         HeartBeat {
-            branch: self.branch,
-            category: self.category,
-            entity: self.entity,
-            is_write: self.is_write,
-            language: self.language,
-            lineno: self.lineno,
-            lines: self.lines,
-            project: self.project,
-            user_agent: self.user_agent,
-            machine_name: self.machine_name,
-            time: self.time.map(|x| chrono::Utc.timestamp(x as _, 0)),
+            branch: h.branch,
+            category: h.category,
+            entity: h.entity,
+            is_write: h.is_write,
+            language: h.language,
+            lineno: h.lineno,
+            lines: h.lines,
+            project: h.project,
+            user_agent: h.user_agent,
+            machine_name: h.machine_name,
+            time: h.time.map(|x| chrono::Utc.timestamp(x as _, 0)),
         }
     }
 }

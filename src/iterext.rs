@@ -1,6 +1,6 @@
 use std::iter::Map;
 
-pub(crate) trait IterExt: Iterator {
+pub trait IterExt: Iterator {
     type EditFunc<F>: FnMut(Self::Item) -> Self::Item;
 
     fn edit<F>(self, f: F) -> Map<Self, Self::EditFunc<F>>
